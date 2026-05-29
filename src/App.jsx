@@ -413,7 +413,6 @@ export default function App() {
         videoRef.current.pause();
       } catch {}
       videoRef.current.srcObject = null;
-      videoRef.current.load?.();
     }
 
     setCameraOn(false);
@@ -507,6 +506,7 @@ export default function App() {
       return;
     }
 
+    // keep still image visible after count completes
     setCapturedImage(frame);
 
     try {
@@ -540,6 +540,8 @@ export default function App() {
       }
 
       setAnalysis(parsed);
+
+      // stop live camera, but keep still image on screen
       stopCamera(true);
       setStatus("Count complete ✅");
     } catch (err) {
@@ -554,26 +556,29 @@ export default function App() {
   const handlePrimaryAction = async () => {
     if (analyzing) return;
 
-    if (!cameraOn && !analysis) {
+    // first use
+    if (!cameraOn && !analysis && !capturedImage) {
       await startCamera();
       return;
     }
 
+    // live camera currently visible
     if (cameraOn) {
       await countObjects();
       return;
     }
 
-    if (!cameraOn && analysis) {
+    // still image + result currently visible
+    if (!cameraOn && (analysis || capturedImage)) {
       await restartCameraFresh();
     }
   };
 
   const getPrimaryButtonLabel = () => {
     if (analyzing) return "Counting...";
-    if (!cameraOn && !analysis) return "Turn On Camera";
+    if (!cameraOn && !analysis && !capturedImage) return "Turn On Camera";
     if (cameraOn) return "Count";
-    if (!cameraOn && analysis) return "Count Another";
+    if (!cameraOn && (analysis || capturedImage)) return "Count Another";
     return "Turn On Camera";
   };
 
@@ -587,9 +592,9 @@ export default function App() {
       );
     }
 
-    if (!cameraOn && !analysis) return <Play size={16} />;
+    if (!cameraOn && !analysis && !capturedImage) return <Play size={16} />;
     if (cameraOn) return <Camera size={16} />;
-    if (!cameraOn && analysis) return <Camera size={16} />;
+    if (!cameraOn && (analysis || capturedImage)) return <Camera size={16} />;
 
     return <Play size={16} />;
   };
@@ -626,8 +631,8 @@ export default function App() {
                         Developed by Osama & Faruque
                       </div>
                       <p className="card-subtitle">
-                        One button flow: open camera, count, then count another
-                        without manually resetting.
+                        Tap Count to capture and keep the still image on screen.
+                        Tap Count Another to return to the live camera.
                       </p>
                     </div>
 
@@ -641,12 +646,24 @@ export default function App() {
                 <div className="card-body">
                   <div className="camera-frame">
                     {cameraOn ? (
-                      <video key={videoKey} ref={videoRef} playsInline muted autoPlay />
+                      <video
+                        key={videoKey}
+                        ref={videoRef}
+                        playsInline
+                        muted
+                        autoPlay
+                      />
                     ) : capturedImage ? (
                       <img src={capturedImage} alt="Captured objects" />
                     ) : (
                       <>
-                        <video key={videoKey} ref={videoRef} playsInline muted autoPlay />
+                        <video
+                          key={videoKey}
+                          ref={videoRef}
+                          playsInline
+                          muted
+                          autoPlay
+                        />
                         <div className="camera-overlay">
                           <ImageIcon size={42} />
                           <div>
@@ -794,9 +811,8 @@ export default function App() {
                   ) : (
                     <div className="empty">
                       Tap <strong>Turn On Camera</strong>, then tap{" "}
-                      <strong>Count</strong>. After a result appears, tap{" "}
-                      <strong>Count Another</strong> to immediately start the
-                      next one.
+                      <strong>Count</strong>. The still image will remain visible
+                      until you tap <strong>Count Another</strong>.
                     </div>
                   )}
                 </div>
