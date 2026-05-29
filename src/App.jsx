@@ -394,12 +394,34 @@ export default function App() {
   );
   const [error, setError] = useState("");
   const [analysis, setAnalysis] = useState(null);
+  const [videoKey, setVideoKey] = useState(0);
 
   useEffect(() => {
     return () => {
-      stopCamera();
+      stopCamera(true);
     };
   }, []);
+
+  const stopCamera = (silent = false) => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+
+    if (videoRef.current) {
+      try {
+        videoRef.current.pause();
+      } catch {}
+      videoRef.current.srcObject = null;
+      videoRef.current.load?.();
+    }
+
+    setCameraOn(false);
+
+    if (!silent) {
+      setStatus("Camera stopped.");
+    }
+  };
 
   const startCamera = async () => {
     setError("");
@@ -422,8 +444,6 @@ export default function App() {
         await videoRef.current.play();
       }
 
-      setCapturedImage(null);
-      setAnalysis(null);
       setCameraOn(true);
       setStatus("Camera ready — point at the objects and press Count.");
     } catch {
@@ -435,19 +455,24 @@ export default function App() {
     }
   };
 
-  const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-    setCameraOn(false);
-  };
-
-  const hardReset = () => {
-    stopCamera();
+  const restartCameraFresh = async () => {
+    stopCamera(true);
     setCapturedImage(null);
     setAnalysis(null);
     setError("");
+    setVideoKey((prev) => prev + 1);
+    setStatus("Reopening camera...");
+
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    await startCamera();
+  };
+
+  const hardReset = () => {
+    stopCamera(true);
+    setCapturedImage(null);
+    setAnalysis(null);
+    setError("");
+    setVideoKey((prev) => prev + 1);
     setStatus("Ready — turn on the camera and count visible objects.");
   };
 
@@ -515,7 +540,7 @@ export default function App() {
       }
 
       setAnalysis(parsed);
-      stopCamera();
+      stopCamera(true);
       setStatus("Count complete ✅");
     } catch (err) {
       setAnalysis(null);
@@ -540,14 +565,14 @@ export default function App() {
     }
 
     if (!cameraOn && analysis) {
-      await startCamera();
+      await restartCameraFresh();
     }
   };
 
   const getPrimaryButtonLabel = () => {
     if (analyzing) return "Counting...";
     if (!cameraOn && !analysis) return "Turn On Camera";
-    if (cameraOn) return analysis ? "Count Again" : "Count";
+    if (cameraOn) return "Count";
     if (!cameraOn && analysis) return "Count Another";
     return "Turn On Camera";
   };
@@ -615,31 +640,32 @@ export default function App() {
 
                 <div className="card-body">
                   <div className="camera-frame">
-                    {capturedImage && !cameraOn ? (
+                    {cameraOn ? (
+                      <video key={videoKey} ref={videoRef} playsInline muted autoPlay />
+                    ) : capturedImage ? (
                       <img src={capturedImage} alt="Captured objects" />
                     ) : (
-                      <video ref={videoRef} playsInline muted />
-                    )}
-
-                    {!cameraOn && !capturedImage && (
-                      <div className="camera-overlay">
-                        <ImageIcon size={42} />
-                        <div>
-                          <div style={{ fontWeight: 800, fontSize: "1.1rem" }}>
-                            Turn on the camera
-                          </div>
-                          <div
-                            style={{
-                              marginTop: 8,
-                              color: "rgba(255,255,255,.78)",
-                              lineHeight: 1.5,
-                            }}
-                          >
-                            For best results, place the objects on a contrasting
-                            background with minimal overlap.
+                      <>
+                        <video key={videoKey} ref={videoRef} playsInline muted autoPlay />
+                        <div className="camera-overlay">
+                          <ImageIcon size={42} />
+                          <div>
+                            <div style={{ fontWeight: 800, fontSize: "1.1rem" }}>
+                              Turn on the camera
+                            </div>
+                            <div
+                              style={{
+                                marginTop: 8,
+                                color: "rgba(255,255,255,.78)",
+                                lineHeight: 1.5,
+                              }}
+                            >
+                              For best results, place the objects on a contrasting
+                              background with minimal overlap.
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      </>
                     )}
                   </div>
 
