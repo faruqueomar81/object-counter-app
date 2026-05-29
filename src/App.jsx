@@ -506,17 +506,16 @@ export default function App() {
       return;
     }
 
-    // keep still image visible after count completes
+    // Freeze immediately
     setCapturedImage(frame);
+    stopCamera(true);
+    setStatus("Snapshot captured. Counting now...");
 
     try {
       setAnalyzing(true);
       setError("");
-      setStatus("Resizing image...");
 
       const resizedBlob = await resizeImage(frame, 1400, 0.82);
-
-      setStatus("Counting objects...");
 
       const formData = new FormData();
       formData.append("image", resizedBlob, "objects.jpg");
@@ -540,9 +539,6 @@ export default function App() {
       }
 
       setAnalysis(parsed);
-
-      // stop live camera, but keep still image on screen
-      stopCamera(true);
       setStatus("Count complete ✅");
     } catch (err) {
       setAnalysis(null);
@@ -556,19 +552,16 @@ export default function App() {
   const handlePrimaryAction = async () => {
     if (analyzing) return;
 
-    // first use
     if (!cameraOn && !analysis && !capturedImage) {
       await startCamera();
       return;
     }
 
-    // live camera currently visible
     if (cameraOn) {
       await countObjects();
       return;
     }
 
-    // still image + result currently visible
     if (!cameraOn && (analysis || capturedImage)) {
       await restartCameraFresh();
     }
@@ -631,8 +624,8 @@ export default function App() {
                         Developed by Osama & Faruque
                       </div>
                       <p className="card-subtitle">
-                        Tap Count to capture and keep the still image on screen.
-                        Tap Count Another to return to the live camera.
+                        Tap Count to freeze the image immediately. Tap Count
+                        Another to return to the live camera.
                       </p>
                     </div>
 
@@ -811,8 +804,9 @@ export default function App() {
                   ) : (
                     <div className="empty">
                       Tap <strong>Turn On Camera</strong>, then tap{" "}
-                      <strong>Count</strong>. The still image will remain visible
-                      until you tap <strong>Count Another</strong>.
+                      <strong>Count</strong>. The image freezes immediately on
+                      tap and stays visible until you press{" "}
+                      <strong>Count Another</strong>.
                     </div>
                   )}
                 </div>
@@ -839,3 +833,4 @@ export default function App() {
     </>
   );
 }
+``
