@@ -13,8 +13,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 
-const WORKER_URL =
-  "https://dashboard-insight-worker.faruqueomar81.workers.dev";
+const WORKER_URL = "https://dashboard-insight-worker.faruqueomar81.workers.dev";
 
 function styles() {
   return `
