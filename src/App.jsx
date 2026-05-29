@@ -55,11 +55,11 @@ function styles() {
     }
 
     .card {
-      background: rgba(255,255,255,.92);
+      background: rgba(255,255,255,.94);
       backdrop-filter: blur(8px);
-      border: 1px solid rgba(148, 163, 184, .22);
-      border-radius: 24px;
-      box-shadow: 0 12px 34px rgba(15, 23, 42, .08);
+      border: 1px solid rgba(148, 163, 184, .20);
+      border-radius: 26px;
+      box-shadow: 0 16px 38px rgba(15, 23, 42, .08);
       overflow: hidden;
     }
 
@@ -130,7 +130,7 @@ function styles() {
 
     .button-row {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
       margin-top: 14px;
     }
@@ -164,19 +164,14 @@ function styles() {
       box-shadow: 0 10px 24px rgba(29, 78, 216, .24);
     }
 
-    .btn-secondary {
-      background: #e2e8f0;
-      color: #0f172a;
-    }
-
     .btn-outline {
       background: white;
       color: #0f172a;
       border: 1px solid #cbd5e1;
     }
 
-    .status-box, .result-card, .notice {
-      border-radius: 20px;
+    .status-box, .result-card, .notice, .hero-count-card {
+      border-radius: 22px;
       border: 1px solid #e2e8f0;
       background: #f8fafc;
       padding: 14px;
@@ -240,9 +235,53 @@ function styles() {
       gap: 12px;
     }
 
+    .hero-count-card {
+      background: white;
+      box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+      padding: 18px;
+    }
+
+    .hero-count-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .hero-count-label {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .hero-count-panel {
+      background: #cfe5bb;
+      border-radius: 24px;
+      min-height: 132px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.35);
+    }
+
+    .hero-count-number {
+      font-size: clamp(3rem, 7vw, 4.8rem);
+      font-weight: 500;
+      color: #0f172a;
+      letter-spacing: -0.04em;
+      line-height: 1;
+    }
+
+    .hero-count-comment {
+      margin-top: 12px;
+      color: #475569;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
     .result-card {
       background: white;
-      box-shadow: 0 6px 18px rgba(15, 23, 42, .04);
+      box-shadow: 0 8px 20px rgba(15, 23, 42, .04);
     }
 
     .result-top {
@@ -261,7 +300,7 @@ function styles() {
     }
 
     .result-value {
-      font-size: 1.32rem;
+      font-size: 1.18rem;
       font-weight: 800;
       color: #0f172a;
       line-height: 1.35;
@@ -383,6 +422,8 @@ export default function App() {
         await videoRef.current.play();
       }
 
+      setCapturedImage(null);
+      setAnalysis(null);
       setCameraOn(true);
       setStatus("Camera ready — point at the objects and press Count.");
     } catch {
@@ -402,7 +443,7 @@ export default function App() {
     setCameraOn(false);
   };
 
-  const resetAll = () => {
+  const hardReset = () => {
     stopCamera();
     setCapturedImage(null);
     setAnalysis(null);
@@ -474,6 +515,7 @@ export default function App() {
       }
 
       setAnalysis(parsed);
+      stopCamera();
       setStatus("Count complete ✅");
     } catch (err) {
       setAnalysis(null);
@@ -482,6 +524,49 @@ export default function App() {
     } finally {
       setAnalyzing(false);
     }
+  };
+
+  const handlePrimaryAction = async () => {
+    if (analyzing) return;
+
+    if (!cameraOn && !analysis) {
+      await startCamera();
+      return;
+    }
+
+    if (cameraOn) {
+      await countObjects();
+      return;
+    }
+
+    if (!cameraOn && analysis) {
+      await startCamera();
+    }
+  };
+
+  const getPrimaryButtonLabel = () => {
+    if (analyzing) return "Counting...";
+    if (!cameraOn && !analysis) return "Turn On Camera";
+    if (cameraOn) return analysis ? "Count Again" : "Count";
+    if (!cameraOn && analysis) return "Count Another";
+    return "Turn On Camera";
+  };
+
+  const getPrimaryButtonIcon = () => {
+    if (analyzing) {
+      return (
+        <Loader2
+          size={16}
+          style={{ animation: "spin 1s linear infinite" }}
+        />
+      );
+    }
+
+    if (!cameraOn && !analysis) return <Play size={16} />;
+    if (cameraOn) return <Camera size={16} />;
+    if (!cameraOn && analysis) return <Camera size={16} />;
+
+    return <Play size={16} />;
   };
 
   return (
@@ -513,12 +598,11 @@ export default function App() {
                           fontWeight: 600,
                         }}
                       >
-                        Developed by Faruque
+                        Developed by Osama & Faruque
                       </div>
                       <p className="card-subtitle">
-                        Turn on the camera, point at a group of similar objects,
-                        then press Count. If the objects are coins, the app will
-                        also estimate the value.
+                        One button flow: open camera, count, then count another
+                        without manually resetting.
                       </p>
                     </div>
 
@@ -531,7 +615,7 @@ export default function App() {
 
                 <div className="card-body">
                   <div className="camera-frame">
-                    {capturedImage ? (
+                    {capturedImage && !cameraOn ? (
                       <img src={capturedImage} alt="Captured objects" />
                     ) : (
                       <video ref={videoRef} playsInline muted />
@@ -562,29 +646,16 @@ export default function App() {
                   <canvas ref={canvasRef} style={{ display: "none" }} />
 
                   <div className="button-row">
-                    {!cameraOn ? (
-                      <button className="btn btn-primary" onClick={startCamera}>
-                        <Play size={16} /> Turn On Camera
-                      </button>
-                    ) : (
-                      <button
-                        className="btn btn-primary"
-                        onClick={countObjects}
-                        disabled={analyzing}
-                      >
-                        {analyzing ? (
-                          <Loader2
-                            size={16}
-                            style={{ animation: "spin 1s linear infinite" }}
-                          />
-                        ) : (
-                          <Camera size={16} />
-                        )}
-                        {analyzing ? "Counting..." : "Count"}
-                      </button>
-                    )}
+                    <button
+                      className="btn btn-primary"
+                      onClick={handlePrimaryAction}
+                      disabled={analyzing}
+                    >
+                      {getPrimaryButtonIcon()}
+                      {getPrimaryButtonLabel()}
+                    </button>
 
-                    <button className="btn btn-outline" onClick={resetAll}>
+                    <button className="btn btn-outline" onClick={hardReset}>
                       <RefreshCcw size={16} /> Reset
                     </button>
                   </div>
@@ -614,8 +685,7 @@ export default function App() {
                 <div className="card-header">
                   <h2 className="card-title">Count Results</h2>
                   <p className="card-subtitle">
-                    Detected object type, estimated quantity, value when
-                    applicable, and confidence comments.
+                    Estimated count first, then supporting details below.
                   </p>
                 </div>
 
@@ -630,6 +700,21 @@ export default function App() {
                     </div>
                   ) : analysis ? (
                     <div className="results-grid">
+                      <div className="hero-count-card">
+                        <div className="hero-count-top">
+                          <Hash size={22} color="#2f8f2f" />
+                          <div className="hero-count-label">Estimated Count</div>
+                        </div>
+                        <div className="hero-count-panel">
+                          <div className="hero-count-number">
+                            {analysis.count ?? "—"}
+                          </div>
+                        </div>
+                        <div className="hero-count-comment">
+                          {analysis.count_comment || "—"}
+                        </div>
+                      </div>
+
                       <div className="result-card">
                         <div className="result-top">
                           <BadgeHelp size={18} color="#1d4ed8" />
@@ -645,19 +730,6 @@ export default function App() {
 
                       <div className="result-card">
                         <div className="result-top">
-                          <Hash size={18} color="#166534" />
-                          <div className="result-title">Estimated Count</div>
-                        </div>
-                        <div className="result-value">
-                          {analysis.count ?? "—"}
-                        </div>
-                        <div className="result-basis">
-                          {analysis.count_comment || "—"}
-                        </div>
-                      </div>
-
-                      <div className="result-card">
-                        <div className="result-top">
                           <Coins size={18} color="#b45309" />
                           <div className="result-title">Estimated Value</div>
                         </div>
@@ -665,7 +737,8 @@ export default function App() {
                           {analysis.estimated_value || "N/A"}
                         </div>
                         <div className="result-basis">
-                          {analysis.value_comment || "Value only appears when coins are recognized."}
+                          {analysis.value_comment ||
+                            "Value only appears when coins are recognized."}
                         </div>
                       </div>
 
@@ -694,8 +767,10 @@ export default function App() {
                     </div>
                   ) : (
                     <div className="empty">
-                      Turn on the camera and tap <strong>Count</strong> to
-                      identify and estimate the visible objects.
+                      Tap <strong>Turn On Camera</strong>, then tap{" "}
+                      <strong>Count</strong>. After a result appears, tap{" "}
+                      <strong>Count Another</strong> to immediately start the
+                      next one.
                     </div>
                   )}
                 </div>
@@ -709,8 +784,8 @@ export default function App() {
                   <div className="notice">
                     <div className="footer-note">
                       Works best when objects are similar, clearly visible, and
-                      not heavily overlapping. For coins, totals are only
-                      estimates based on visible denominations.
+                      not heavily overlapping. For coins, totals are estimates
+                      based on visible denominations.
                     </div>
                   </div>
                 </div>
@@ -722,4 +797,3 @@ export default function App() {
     </>
   );
 }
-``
